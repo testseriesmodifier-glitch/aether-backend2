@@ -1,5 +1,5 @@
 import Groq from 'groq-sdk';
-import pdf from 'pdf-parse'; // PDF পড়ার লাইব্রেরি
+import pdf from 'pdf-parse'; // PDF পড়ার লাইব্রেরি
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
         const { message, history, file } = req.body;
         let pdfText = "";
 
-        // 2. PDF Handling Logic (🔥 NEW)
+        // 2. PDF Handling Logic
         if (file && file.type === 'application/pdf') {
             try {
                 // Base64 থেকে বাফার তৈরি করা
@@ -53,7 +53,6 @@ export default async function handler(req, res) {
         if (file) {
             if (file.type === 'application/pdf') {
                 // === PDF Mode (Text Based) ===
-                // PDF এর লেখাগুলো ইউজার মেসেজের সাথে দিয়ে দেওয়া হবে
                 messages.push({
                     role: "user",
                     content: `User uploaded a PDF. Here is the content of the PDF:\n\n${pdfText}\n\nUser Question: ${message || "Explain this PDF."}`
@@ -73,11 +72,10 @@ export default async function handler(req, res) {
             messages.push({ role: "user", content: message });
         }
 
-        // 5. Model Selection
-        // PDF এর জন্য Text Model (llama-3.3) ব্যবহার করব কারণ আমরা লেখা বের করে নিয়েছি
-        // ইমেজের জন্য Vision Model
+        // 5. Model Selection (🔥🔥 FIXED HERE 🔥🔥)
+        // 90b is deprecated, using 11b for vision
         const isImage = file && file.type.startsWith('image/');
-        const modelName = isImage ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
+        const modelName = isImage ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
