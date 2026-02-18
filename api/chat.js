@@ -77,7 +77,7 @@ export default async function handler(req, res) {
         // PDF এর জন্য Text Model (llama-3.3) ব্যবহার করব কারণ আমরা লেখা বের করে নিয়েছি
         // ইমেজের জন্য Vision Model
         const isImage = file && file.type.startsWith('image/');
-        const modelName = isImage ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
+        const modelName = isImage ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
