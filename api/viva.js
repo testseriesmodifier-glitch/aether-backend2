@@ -3,7 +3,7 @@ import Groq from 'groq-sdk';
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req, res) {
-    // 1. CORS Headers (Allow Frontend Access)
+    // 1. CORS Headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -55,15 +55,17 @@ export default async function handler(req, res) {
             messages.push({ role: "user", content: message });
         }
 
-        // 5. Select Model
-        // Image logic remains same, but we lower temperature for strictness
-        const modelName = file ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
+        // 5. Select Model (FIXED HERE)
+        // llama-3.2-90b is deprecated. Using llama-3.2-11b instead.
+        const modelName = (file && file.data) 
+            ? "llama-3.2-11b-vision-preview" 
+            : "llama-3.3-70b-versatile";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: modelName,
-            temperature: 0.5, // Lower temperature = More logical/strict, less creative
-            max_tokens: 500   // Viva answers should be concise
+            temperature: 0.5, // Strict mode
+            max_tokens: 500
         });
 
         res.status(200).json({ reply: completion.choices[0]?.message?.content || "No response." });
