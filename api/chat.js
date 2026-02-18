@@ -1,7 +1,15 @@
 import Groq from 'groq-sdk';
-import pdf from 'pdf-parse'; // PDF পড়ার লাইব্রেরি
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// 🔥🔥 এই অংশটি মিসিং ছিল - এটি ছাড়া ছবি আপলোড হবে না 🔥🔥
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '4mb', // 1MB থেকে বাড়িয়ে 4MB করা হলো
+        },
+    },
+};
 
 export default async function handler(req, res) {
     // 1. CORS Headers
@@ -16,27 +24,27 @@ export default async function handler(req, res) {
         const { message, history, file } = req.body;
         let pdfText = "";
 
-        // 2. PDF Handling Logic
+        // 2. PDF Handling (Safe require)
         if (file && file.type === 'application/pdf') {
             try {
-                // Base64 থেকে বাফার তৈরি করা
+                // নিরাপদে লাইব্রেরি লোড করা (যাতে সার্ভার ক্র্যাশ না করে)
+                const pdf = require('pdf-parse'); 
                 const base64Data = file.data.split(',')[1];
                 const dataBuffer = Buffer.from(base64Data, 'base64');
-                
-                // PDF থেকে টেক্সট বের করা
                 const data = await pdf(dataBuffer);
-                pdfText = data.text; // পুরো PDF এর লেখা এখানে
+                pdfText = data.text.substring(0, 6000); // টেক্সট ছোট করা
             } catch (err) {
-                console.error("PDF Parse Error:", err);
-                return res.status(500).json({ error: "Failed to read PDF file." });
+                console.error("PDF Error:", err);
+                // PDF ফেইল করলেও কোড থামবে না
+                pdfText = "Error reading PDF file. Please rely on user description.";
             }
         }
 
         // 3. System Prompt
         const isViva = history && JSON.stringify(history).includes("Professor");
         const systemPrompt = isViva 
-            ? "You are Prof. Aether. Use the provided context to ask strict questions."
-            : "You are Aether. Use the provided context to help the student.";
+            ? "You are Prof. Aether. Use context to ask tough questions."
+            : "You are Aether. Use context to explain physics clearly.";
 
         let messages = [{ role: "system", content: systemPrompt }];
 
@@ -52,13 +60,13 @@ export default async function handler(req, res) {
         // 4. Message Construction
         if (file) {
             if (file.type === 'application/pdf') {
-                // === PDF Mode (Text Based) ===
+                // PDF Mode
                 messages.push({
                     role: "user",
-                    content: `User uploaded a PDF. Here is the content of the PDF:\n\n${pdfText}\n\nUser Question: ${message || "Explain this PDF."}`
+                    content: `PDF Content:\n${pdfText}\n\nQuestion: ${message || "Explain this."}`
                 });
             } else if (file.data) {
-                // === Image Mode (Vision) ===
+                // Image Mode
                 messages.push({
                     role: "user",
                     content: [
@@ -68,12 +76,11 @@ export default async function handler(req, res) {
                 });
             }
         } else {
-            // === Text Only ===
-            messages.push({ role: "user", content: message });
+            // Text Mode
+            messages.push({ role: "user", content: message || "Hello" });
         }
 
-        // 5. Model Selection (🔥🔥 FIXED HERE 🔥🔥)
-        // 90b is deprecated, using 11b for vision
+        // 5. Model Selection (11b for Vision, 70b for Text)
         const isImage = file && file.type.startsWith('image/');
         const modelName = isImage ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
 
