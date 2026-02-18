@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
         // 5. Select Model
         // Image logic remains same, but we lower temperature for strictness
-        const modelName = file ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
+        const modelName = file ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
