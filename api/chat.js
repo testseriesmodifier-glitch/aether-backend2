@@ -2,17 +2,16 @@ import Groq from 'groq-sdk';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// 🔥🔥 বড় ছবি আপলোডের জন্য লিমিট (4MB) 🔥🔥
+// সাইজ লিমিট (বড় ছবির জন্য)
 export const config = {
     api: {
         bodyParser: {
-            sizeLimit: '4mb', 
+            sizeLimit: '4mb',
         },
     },
 };
 
 export default async function handler(req, res) {
-    // 1. CORS Headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -24,10 +23,9 @@ export default async function handler(req, res) {
         const { message, history, file } = req.body;
         let pdfText = "";
 
-        // 2. PDF Handling (Safe require)
+        // PDF Handling
         if (file && file.type === 'application/pdf') {
             try {
-                // নিরাপদে লাইব্রেরি লোড করা
                 const pdf = require('pdf-parse'); 
                 const base64Data = file.data.split(',')[1];
                 const dataBuffer = Buffer.from(base64Data, 'base64');
@@ -35,19 +33,18 @@ export default async function handler(req, res) {
                 pdfText = data.text.substring(0, 6000); 
             } catch (err) {
                 console.error("PDF Error:", err);
-                pdfText = "Error reading PDF file. Please rely on user description.";
+                pdfText = "Error reading PDF. Please describe the question."; 
             }
         }
 
-        // 3. System Prompt
+        // System Prompt
         const isViva = history && JSON.stringify(history).includes("Professor");
         const systemPrompt = isViva 
-            ? "You are Prof. Aether. Use context to ask tough questions."
-            : "You are Aether. Use context to explain physics clearly.";
+            ? "You are Prof. Aether. Strict examiner."
+            : "You are Aether. Helpful physics assistant.";
 
         let messages = [{ role: "system", content: systemPrompt }];
 
-        // Add History
         if (history && Array.isArray(history)) {
             history.forEach(msg => {
                 if (typeof msg.content === 'string') {
@@ -56,16 +53,14 @@ export default async function handler(req, res) {
             });
         }
 
-        // 4. Message Construction
+        // Construct Message
         if (file) {
             if (file.type === 'application/pdf') {
-                // PDF Mode
                 messages.push({
                     role: "user",
-                    content: `PDF Content:\n${pdfText}\n\nQuestion: ${message || "Explain this."}`
+                    content: `PDF Content:\n${pdfText}\n\nQuestion: ${message}`
                 });
             } else if (file.data) {
-                // Image Mode
                 messages.push({
                     role: "user",
                     content: [
@@ -75,13 +70,14 @@ export default async function handler(req, res) {
                 });
             }
         } else {
-            // Text Mode
-            messages.push({ role: "user", content: message || "Hello" });
+            messages.push({ role: "user", content: message });
         }
 
-        // 5. Model Selection (🔥🔥 FIXED HERE: instruct ব্যবহার করা হয়েছে 🔥🔥)
+        // 🔥🔥 Llama 4 Vision মডেল যুক্ত করা হয়েছে 🔥🔥
         const isImage = file && file.type && file.type.startsWith('image/');
-        const modelName = isImage ? "llama-3.2-11b-vision-instruct" : "llama-3.3-70b-versatile";
+        const modelName = isImage 
+            ? "meta-llama/llama-4-scout-17b-16e-instruct"  // <--- নতুন Llama 4 Vision Model
+            : "llama-3.3-70b-versatile";       
 
         const completion = await groq.chat.completions.create({
             messages: messages,
@@ -93,7 +89,7 @@ export default async function handler(req, res) {
         res.status(200).json({ reply: completion.choices[0]?.message?.content || "No response." });
 
     } catch (error) {
-        console.error("Server Error:", error);
+        console.error("API Error:", error);
         res.status(500).json({ error: error.message });
     }
 }
