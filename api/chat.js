@@ -2,7 +2,7 @@ import Groq from 'groq-sdk';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// সাইজ লিমিট (বড় ছবির জন্য)
+// সাইজ লিমিট (বড় ছবির জন্য)
 export const config = {
     api: {
         bodyParser: {
@@ -37,11 +37,16 @@ export default async function handler(req, res) {
             }
         }
 
-        // System Prompt
+        // 🔥 MULTILINGUAL SYSTEM PROMPT (বাংলা ও হিন্দি সাপোর্ট) 🔥
         const isViva = history && JSON.stringify(history).includes("Professor");
         const systemPrompt = isViva 
             ? "You are Prof. Aether. Strict examiner."
-            : "You are Aether. Helpful physics assistant.";
+            : `You are Aether, a helpful physics assistant. 
+               CRITICAL RULE: You are proficient in English, Bengali, and Hindi. 
+               You MUST reply in the EXACT SAME language the user uses.
+               - If the user asks in Bengali (বাংলা), reply in pure Bengali.
+               - If the user asks in Hindi (हिंदी), reply in pure Hindi.
+               - If the user asks in English, reply in English.`;
 
         let messages = [{ role: "system", content: systemPrompt }];
 
@@ -73,10 +78,10 @@ export default async function handler(req, res) {
             messages.push({ role: "user", content: message });
         }
 
-        // 🔥🔥 Llama 4 Vision মডেল যুক্ত করা হয়েছে 🔥🔥
+        // 🔥 Llama 4 Vision Model 🔥
         const isImage = file && file.type && file.type.startsWith('image/');
         const modelName = isImage 
-            ? "meta-llama/llama-4-scout-17b-16e-instruct"  // <--- নতুন Llama 4 Vision Model
+            ? "meta-llama/llama-4-scout-17b-16e-instruct" 
             : "llama-3.3-70b-versatile";       
 
         const completion = await groq.chat.completions.create({
