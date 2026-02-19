@@ -2,11 +2,11 @@ import Groq from 'groq-sdk';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// 🔥🔥 এই অংশটি মিসিং ছিল - এটি ছাড়া ছবি আপলোড হবে না 🔥🔥
+// 🔥🔥 বড় ছবি আপলোডের জন্য লিমিট (4MB) 🔥🔥
 export const config = {
     api: {
         bodyParser: {
-            sizeLimit: '4mb', // 1MB থেকে বাড়িয়ে 4MB করা হলো
+            sizeLimit: '4mb', 
         },
     },
 };
@@ -27,15 +27,14 @@ export default async function handler(req, res) {
         // 2. PDF Handling (Safe require)
         if (file && file.type === 'application/pdf') {
             try {
-                // নিরাপদে লাইব্রেরি লোড করা (যাতে সার্ভার ক্র্যাশ না করে)
+                // নিরাপদে লাইব্রেরি লোড করা
                 const pdf = require('pdf-parse'); 
                 const base64Data = file.data.split(',')[1];
                 const dataBuffer = Buffer.from(base64Data, 'base64');
                 const data = await pdf(dataBuffer);
-                pdfText = data.text.substring(0, 6000); // টেক্সট ছোট করা
+                pdfText = data.text.substring(0, 6000); 
             } catch (err) {
                 console.error("PDF Error:", err);
-                // PDF ফেইল করলেও কোড থামবে না
                 pdfText = "Error reading PDF file. Please rely on user description.";
             }
         }
@@ -80,9 +79,9 @@ export default async function handler(req, res) {
             messages.push({ role: "user", content: message || "Hello" });
         }
 
-        // 5. Model Selection (11b for Vision, 70b for Text)
-        const isImage = file && file.type.startsWith('image/');
-        const modelName = isImage ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
+        // 5. Model Selection (🔥🔥 FIXED HERE: instruct ব্যবহার করা হয়েছে 🔥🔥)
+        const isImage = file && file.type && file.type.startsWith('image/');
+        const modelName = isImage ? "llama-3.2-11b-vision-instruct" : "llama-3.3-70b-versatile";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
