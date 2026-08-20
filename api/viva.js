@@ -2,7 +2,7 @@ import Groq from 'groq-sdk';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// 🔥🔥 বড় ছবি আপলোডের জন্য লিমিট (4MB) যোগ করা হলো 🔥🔥
+// 🔥🔥 বড় ছবি আপলোডের জন্য লিমিট (4MB) যোগ করা হলো 🔥🔥
 export const config = {
     api: {
         bodyParser: {
@@ -63,10 +63,10 @@ export default async function handler(req, res) {
             messages.push({ role: "user", content: message });
         }
 
-        // 5. Select Model (🔥🔥 FIXED HERE: Llama 4 Vision Model 🔥🔥)
+        // 5. Select Model (🔥🔥 FIXED HERE: Using Qwen3.6 27B instead of the decommissioned Llama 3.3 🔥🔥)
         const modelName = (file && file.data) 
             ? "meta-llama/llama-4-scout-17b-16e-instruct" 
-            : "llama-3.3-70b-versatile";
+            : "qwen-3.6-27b";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
