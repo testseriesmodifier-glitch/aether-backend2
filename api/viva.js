@@ -66,7 +66,7 @@ export default async function handler(req, res) {
         // 5. Select Model (🔥🔥 FIXED HERE: Using Qwen3.6 27B instead of the decommissioned Llama 3.3 🔥🔥)
         const modelName = (file && file.data) 
             ? "meta-llama/llama-4-scout-17b-16e-instruct" 
-            : "qwen-3.6-27b";
+            : "gpt-oss-120b";
 
         const completion = await groq.chat.completions.create({
             messages: messages,
